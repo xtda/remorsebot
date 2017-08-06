@@ -17,5 +17,6 @@ module Bot
     def self.data
       @config
     end
+    init
   end
 end

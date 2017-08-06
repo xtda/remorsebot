@@ -4,11 +4,11 @@ require 'bundler/setup'
 require 'discordrb'
 require 'json'
 require 'yaml'
+require 'fileutils'
 
 module Bot
   require_relative 'bot/configuration.rb'
-
-  Configuration.init
+  require_relative 'bot/database.rb'
 
   bot = Discordrb::Commands::CommandBot.new token: Configuration.data['discord_token'],
                                             client_id: Configuration.data['discord_application_id'],
