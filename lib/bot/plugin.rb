@@ -4,14 +4,14 @@ module Bot
       @plugins ||= []
     end
 
-    def self.inherited(klass)
+    def self.inherited(subclass)
       @plugins ||= []
 
-      @plugins << klass
+      @plugins << subclass
     end
 
-    def init(_bot)
-      raise "#{self.class.name} doesn't implement `init`!"
+    def initialize
+      raise "#{self.class.name} doesn't implement `initialize`!"
     end
   end
 end

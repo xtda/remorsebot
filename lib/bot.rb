@@ -9,6 +9,9 @@ require 'fileutils'
 require 'sequel'
 require 'sqlite3'
 
+# Bot main module
+# loads required libaries creates a bot loads plugins starts bot
+
 module Bot
   require_relative 'bot/configuration.rb'
   require_relative 'bot/database.rb'
@@ -22,7 +25,7 @@ module Bot
 
   Plugin.plugins.each do |plugin|
     bot.include! plugin
-    plugin.init bot
+    plugin.new bot
   end
 
   bot.run :async
