@@ -3,14 +3,14 @@ module Bot
     def self.init
       Dir.mkdir('./data') unless File.exist?('./data')
       Dir.mkdir('./data/migrations') unless File.exist?('./data/migrations')
-      FileUtils.touch "data/remorse.db" unless File.exist?("data/remorse.db")
+      FileUtils.touch "data/#{Configuration.data['bot_database_name']}" unless File.exist?("data/#{Configuration.data['bot_database_name']}")
 
-      #db = Sequel.connect('sqlite://data/billy.db')
+      db = Sequel.connect("sqlite://data/#{Configuration.data['bot_database_name']}")
 
-      #Sequel.extension :migration
+      Sequel.extension :migration
 
-      #Sequel::Migrator.run(db, './data/migrations')
+      Sequel::Migrator.run(db, './data/migrations') unless Dir['./data/migrations/*'].empty?
     end
-  self.init
-    end
+    init
+  end
 end
