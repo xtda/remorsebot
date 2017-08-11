@@ -1,7 +1,12 @@
 discord_token: ''
 discord_application_id: ''
-discord_owner_id: ''
 
 command_prefix: '!'
 
 bot_database_name: 'database.rb'
+
+discord_owner_id: ''
+roles:
+  id: level 
+
+armory_permission_level: 200

@@ -16,7 +16,11 @@ module Bot
     end
 
     ready do |event|
-      event.bot.set_user_permission(Configuration.data['discord_owner_id'], 999)
+      event.bot.set_user_permission(Configuration.data['discord_owner_id'].to_i, 999)
+
+      Configuration.data['roles'].each do |roleid, level|
+        event.bot.set_role_permission(roleid.to_i, level)
+      end
     end
 
     command :plugins do |event|
