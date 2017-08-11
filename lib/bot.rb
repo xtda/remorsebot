@@ -21,13 +21,14 @@ module Bot
                                             client_id: Configuration.data['discord_application_id'],
                                             prefix: Configuration.data['command_prefix']
 
+
+
   Dir['./lib/bot/plugins/*.rb'].each { |p| require p }
 
   Plugin.plugins.each do |plugin|
     bot.include! plugin
-    plugin.new bot
+    plugin.new
   end
-
   bot.run :async
   gets
   bot.stop

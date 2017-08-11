@@ -9,15 +9,15 @@ module Bot
         version: '0.0.1' }
     end
 
-    def self.api_key
+    def api_key
       @api_key ||= Configuration.data['bnet_api_key']
     end
 
-    def initialize(_bot) end
+    def initialize() end
 
-    command :armory, min_args: 2, max_args: 3, 
-            description: 'Search the armory for a player', 
-            usage: '!armory name realm region(option)' do |event, *args|
+    command :armory, min_args: 2, max_args: 3,
+                     description: 'Search the armory for a player',
+                     usage: '!armory name realm region(option)' do |event, *args|
     end
   end
 end
