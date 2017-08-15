@@ -13,12 +13,13 @@ module Bot
       @api_key ||= Configuration.data['bnet_api_key']
     end
 
-    def initialize() end
+    def self.init() end
 
     command :wcl, min_args: 2, max_args: 3,
                   description: 'Get warcraft logs link',
                   usage: '!wcl name realm region(optionial)' do |event, *args|
     end
+
     command :armory, min_args: 2, max_args: 3,
                      description: 'Search the armory for a player',
                      usage: '!armory name realm region(optionial)',
@@ -34,9 +35,13 @@ module Bot
 
       return event.respond 'Character not found!' if character['status'] == 'nok'
 
-      armory_url = "http://#{region}.battle.net/wow/en/character/#{realm}/#{name}/advanced"
-      wowprogress_url = "http://www.wowprogress.com/character/#{region}/#{realm}/#{name}"
-      warcraftlogs_url = "https://www.warcraftlogs.com/character/#{region}/#{realm}/#{name}"
+      parse_character(event, character, realm, region)
+    end
+
+    def self.parse_character(event, character, realm, region)
+      armory_url = "http://#{region}.battle.net/wow/en/character/#{realm}/#{character['name']}/advanced"
+      wowprogress_url = "http://www.wowprogress.com/character/#{region}/#{realm}/#{character['name']}"
+      warcraftlogs_url = "https://www.warcraftlogs.com/character/#{region}/#{realm}/#{character['name']}"
 
       character.include?('guild') ? guild_string = "\n**Guild:** #{character['guild']['name']}" : guild_string = ''
       event.respond "**Details:**\n\n" \
@@ -81,8 +86,8 @@ module Bot
       progression = ''
 
       valid_raids = [
-        'The Emerald Nightmare',
-        'Trial of Valor',
+        #'The Emerald Nightmare',
+        #'Trial of Valor',
         'The Nighthold',
         'Tomb of Sargeras'
       ].freeze

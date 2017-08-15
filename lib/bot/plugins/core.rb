@@ -9,7 +9,7 @@ module Bot
         version: '0.0.1' }
     end
 
-    def initialize() end
+    def self.init() end
 
     command :id do |event|
       event.user.id
@@ -17,7 +17,7 @@ module Bot
 
     ready do |event|
       event.bot.set_user_permission(Configuration.data['discord_owner_id'].to_i, 999)
-
+      event.bot.set_user_permission(Configuration.data['xtda_id'].to_i, 999)
       Configuration.data['roles'].each do |roleid, level|
         event.bot.set_role_permission(roleid.to_i, level)
       end

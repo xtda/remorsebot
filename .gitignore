@@ -10,7 +10,7 @@
 /test/version_tmp/
 /tmp/
 /vendor/
-/data/billy.db
+/data/remorse.db
 
 # Used by dotenv library to load environment variables.
 # .env

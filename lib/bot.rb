@@ -25,7 +25,7 @@ module Bot
 
   Plugin.plugins.each do |plugin|
     bot.include! plugin
-    plugin.new
+    plugin.init
   end
   bot.run :async
   gets

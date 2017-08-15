@@ -10,9 +10,5 @@ module Bot
 
       @plugins << subclass
     end
-
-    def initialize
-      raise "#{self.class.name} doesn't implement `initialize`!"
-    end
   end
 end
