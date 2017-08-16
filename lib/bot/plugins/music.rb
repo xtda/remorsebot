@@ -116,7 +116,6 @@ module Bot
       event.voice.destroy
       event.bot.game = ' '
       event.respond 'Left channel'
-
     end
 
     def self.find_video(event, url)
