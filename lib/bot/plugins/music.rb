@@ -13,15 +13,21 @@ module Bot
 
     def self.init
       @queue = []
-      @currently_playing
+      @currently_playing = nil
       @paused = false
+      @black_list = []
     end
 
-    command :join, help_available: false do |event|
+    command :join, help_available: false,
+                   permission_level: Configuration.data['musicbot_join_permission'].to_i,
+                   permission_message: false do |event|
+
+      return if blacklisted? event.user.name
       join_channel(event)
     end
 
-    command :leave, help_available: false do |event|
+    command [:leave, :byefelicia, :dismiss, :bye], help_available: false do |event|
+      return if blacklisted? event.user.name
       leave_channel(event)
     end
 
@@ -30,22 +36,60 @@ module Bot
     end
 
     command :remove, help_available: false do |event, id|
+      return if blacklisted? event.user.name
       remove(event, id)
     end
 
     command :pause, help_available: false do |event|
+      return if blacklisted? event.user.name
       pause_music(event)
     end
 
-    command :skip, help_available: false do |event|
+    command :blacklist,
+            min_args: 0, max_args: 1,
+            help_available: false,
+            permission_level: Configuration.data['musicbot_blacklist_permission'].to_i,
+            permission_message: false do |event, name|
+      response = ' '
+
+      if name
+        name = name.downcase
+        if blacklisted? name
+          @black_list.delete name
+          response = "#{name} removed from blacklist"
+        else
+          @black_list.push name
+          response = "#{name} added to blacklist"
+        end
+      else
+        response = "Black listed:\n"
+        @black_list.each do |key|
+          response += "#{key}\n"
+        end
+      end
+      event.respond response
+    end
+
+    def self.blacklisted?(name)
+      return true if @black_list.include? name.downcase
+    end
+
+    command :skip, help_available: false,
+                   permission_level: Configuration.data['musicbot_skip_permission'].to_i,
+                   permission_message: false do |event|
       skip(event)
     end
 
     command :volume, help_available: false do |event, vol|
+      return if blacklisted? event.user.name
       set_volume(event, vol)
     end
 
-    command :play, description: 'Add a song to queue', usage: '!play <link to youtube video> or search string' do |event, *args|
+    command :play, description: 'Add a song to queue',
+                   usage: '!play <link to youtube video> or search string',
+                   permission_level: Configuration.data['musicbot_play_permission'].to_i,
+                   permission_message: false do |event, *args|
+      return if blacklisted? event.user.name
       search = args.join(' ')
       return event.respond 'I am not currently on any channel type !join to make me join' unless event.voice
       if @paused
@@ -87,8 +131,8 @@ module Bot
     end
 
     def self.skip(event)
-      event.voice.stop_playing
       event.respond 'Skipping song'
+      event.voice.stop_playing
     end
 
     def self.queue(event)
