@@ -15,11 +15,17 @@ module Bot
       @currently_playing = nil
       @paused = false
       @black_list = []
+      self.load_autoplaylist
     end
 
-    def self.get_queue
+    def self.current_queue
       @queue ||= @queue = []
     end
+
+    def self.autoplaylist
+      @autoplaylist ||= @autoplaylist = []
+    end
+
     command :join, help_available: false,
                    permission_level: Configuration.data['musicbot_join_permission'].to_i,
                    permission_message: false do |event|
@@ -45,6 +51,10 @@ module Bot
     command :pause, help_available: false do |event|
       return if blacklisted? event.user.name
       pause_music(event)
+    end
+
+    command :random, help_available: false do |event|
+      play(event)
     end
 
     command :blacklist,
@@ -126,13 +136,14 @@ module Bot
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
           data = { title: song[:title], filename: song[:_filename],
                    added_by: event.user.name }
-          self.get_queue.push(data)
+          self.current_queue.push(data)
           event.respond "Added **#{data[:title]}** to the queue."
         end
       end
       play(event) unless @currently_playing
     end
 
+    
     def self.skip(event)
       event.respond 'Skipping song'
       event.voice.stop_playing
@@ -142,7 +153,7 @@ module Bot
       @currently_playing ? response = "Now playing: **#{@currently_playing[:title]}** added by #{@currently_playing[:added_by]}" : response =  'Now playing: (nothing)'
       response = "#{response}\nCurrent queue: \n"
       i = 1
-      self.get_queue.each do |song|
+      self.current_queue.each do |song|
         response = "#{response}#{i}. **#{song[:title]}** added by #{song[:added_by]}\n"
         i += 1
       end
@@ -151,7 +162,7 @@ module Bot
 
     def self.remove(event, number)
       if number == 'all'
-        self.get_queue = []
+        self.current_queue = []
       else
         queue.delete_at(number.to_i - 1) unless number.to_i == -1
         event.respond 'Removed song'
@@ -166,28 +177,56 @@ module Bot
         return
       end
       loop do
-        song = self.get_queue.shift
+        if self.current_queue.length.zero?
+          song = self.random_song
+        else
+          song = self.current_queue.shift
+        end
         @currently_playing = song
-        event.respond "Now playing: **#{song[:title]}** added by #{song[:added_by]}"
+        # event.respond "Now playing: **#{song[:title]}** added by #{song[:added_by]}"
         event.bot.game = "#{song[:title]}"
         event.voice.play_file(song[:filename])
-        break if self.get_queue.length.zero?
+        # break if self.current_queue.length.zero?
       end
       @currently_playing = nil
       @paused = false
+      event.bot.game = ' '
       event.respond 'queue empty'
     end
 
     def self.pause_music(event)
-      event.voice.pause
-      @paused = true
-      event.bot.game = "[paused] #{@currently_playing[:title]}"
+      if !@paused
+        event.voice.pause
+        @paused = true
+        event.bot.game = "[paused] #{@currently_playing[:title]}"
+      else
+        event.voice.continue
+        @paused = false
+        event.bot.game = "#{@currently_playing[:title]}"
+      end
+      return nil
     end
 
     def self.set_volume(event, vol)
       return event.respond 'I am not currently on any channel type !join to make me join' unless event.voice
       event.voice.volume = vol.to_f
       event.respond "Volume set to #{vol}"
+    end
+
+    def self.random_song
+      cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.mp3' --audio-format 'mp3' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{self.autoplaylist.sample}\""
+      Open3.popen3(cmd) do |_stdin, stdout, stderr, wait_thr|
+        if wait_thr.value.success?
+          song = JSON.parse(stdout.read.to_s, symbolize_names: true)
+          data = { title: song[:title], filename: song[:_filename],
+                   added_by: "autoplaylist" }
+          return data
+        end
+      end
+    end
+
+    def self.load_autoplaylist
+      File.open('config/autoplaylist.txt').each { |line| autoplaylist << line }
     end
   end
 end
