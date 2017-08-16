@@ -12,12 +12,14 @@ module Bot
     end
 
     def self.init
-      @queue = []
       @currently_playing = nil
       @paused = false
       @black_list = []
     end
 
+    def self.get_queue
+      @queue ||= @queue = []
+    end
     command :join, help_available: false,
                    permission_level: Configuration.data['musicbot_join_permission'].to_i,
                    permission_message: false do |event|
@@ -112,7 +114,9 @@ module Bot
 
     def self.leave_channel(event)
       event.voice.destroy
+      event.bot.game = ' '
       event.respond 'Left channel'
+
     end
 
     def self.find_video(event, url)
@@ -123,7 +127,7 @@ module Bot
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
           data = { title: song[:title], filename: song[:_filename],
                    added_by: event.user.name }
-          @queue.push(data)
+          self.get_queue.push(data)
           event.respond "Added **#{data[:title]}** to the queue."
         end
       end
@@ -139,7 +143,7 @@ module Bot
       @currently_playing ? response = "Now playing: **#{@currently_playing[:title]}** added by #{@currently_playing[:added_by]}" : response =  'Now playing: (nothing)'
       response = "#{response}\nCurrent queue: \n"
       i = 1
-      @queue.each do |song|
+      self.get_queue.each do |song|
         response = "#{response}#{i}. **#{song[:title]}** added by #{song[:added_by]}\n"
         i += 1
       end
@@ -148,9 +152,9 @@ module Bot
 
     def self.remove(event, number)
       if number == 'all'
-        @queue = []
+        self.get_queue = []
       else
-        @queue.delete_at(number.to_i - 1) unless number.to_i == -1
+        queue.delete_at(number.to_i - 1) unless number.to_i == -1
         event.respond 'Removed song'
       end
     end
@@ -163,12 +167,12 @@ module Bot
         return
       end
       loop do
-        song = @queue.shift
+        song = self.get_queue.shift
         @currently_playing = song
         event.respond "Now playing: **#{song[:title]}** added by #{song[:added_by]}"
         event.bot.game = "#{song[:title]}"
         event.voice.play_file(song[:filename])
-        break if @queue.length.zero?
+        break if self.get_queue.length.zero?
       end
       @currently_playing = nil
       @paused = false
