@@ -138,7 +138,7 @@ module Bot
 
     def self.find_video(event, url)
       url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
-      opus_cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.mp3' --audio-format 'mp3' --audio-quality 0 --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
+      opus_cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.m4a' --audio-format 'm4a' --audio-quality 0 --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
       Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
@@ -195,7 +195,6 @@ module Bot
         @currently_playing = song
         event.bot.game = "#{song[:title]}"
         event.voice.play_dca(song[:filename])
-        break if !event.voice
       end
       @currently_playing = nil
       @paused = false
@@ -228,7 +227,7 @@ module Bot
     def self.random_song
       song = autoplaylist.sample
       if song[:filename].nil?
-        cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.mp3' --audio-format 'mp3' --audio-quality 0 --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
+        cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.m4a' --audio-format 'm4a' --audio-quality 0 --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
         Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
           if wait_thr.value.success?
             parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
