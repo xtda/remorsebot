@@ -131,7 +131,7 @@ module Bot
     def self.find_video(event, url)
       url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
       opus_cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.opus' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
-      Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr , wait_thr|
+      Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
           dca_cmd = "./vendor/dca-rs --i #{song[:_filename]} > #{song[:_filename]}.dca"
@@ -208,8 +208,12 @@ module Bot
     end
 
     def self.set_volume(event, vol)
-      return event.respond 'I am not currently on any channel type !join to make me join' unless event.voice
-      event.voice.volume = vol.to_f
+      #return event.respond 'I am not currently on any channel type !join to make me join' unless event.voice
+      #puts "Before: #{event.voice.filter_volume}"
+      if (vol.to_f >= 0) && (vol.to_f <= 100)
+        event.voice.filter_volume = vol.to_f / 100
+      end
+      puts "After: #{event.voice.filter_volume}"
       event.respond "Volume set to #{vol}"
     end
 
