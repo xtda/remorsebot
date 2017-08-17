@@ -122,6 +122,8 @@ module Bot
     def self.join_channel(event)
       return event.respond 'You are not in any voice channel' unless event.user.voice_channel
 
+      if event.bot.voice(event)
+      end
       begin
         event.bot.voice_connect(event.user.voice_channel)
         "Connected to voice channel: #{event.user.voice_channel.name}"
