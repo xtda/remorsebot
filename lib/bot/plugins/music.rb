@@ -57,13 +57,14 @@ module Bot
       play(event)
     end
 
-    command :test do |event, filename|
+    command :test, help_available: false do |event, filename|
       event.voice.play_dca("./tmp/#{filename}")
     end
 
-    command :autolist do 
+    command :autolist, help_available: false do
       puts autoplaylist
     end
+    
     command :blacklist,
             min_args: 0, max_args: 1,
             help_available: false,
