@@ -227,7 +227,7 @@ module Bot
     def self.random_song
       song = autoplaylist.sample
       if song[:filename].nil?
-        cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -f 'mp4' --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
+        cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/auto/%(title)s.%(ext)s' -f 'mp4' --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
         Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
           if wait_thr.value.success?
             parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
