@@ -15,7 +15,7 @@ module Bot
       @currently_playing = nil
       @paused = false
       @black_list = []
-      self.load_autoplaylist
+      load_autoplaylist
     end
 
     def self.current_queue
@@ -130,20 +130,26 @@ module Bot
 
     def self.find_video(event, url)
       url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
-      cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.mp3' --audio-format 'mp3' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
-      Open3.popen3(cmd) do |_stdin, stdout, stderr, wait_thr|
+      opus_cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.opus' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
+      Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr , wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-          data = { title: song[:title], filename: song[:_filename],
+          dca_cmd = "./vendor/dca-rs --i #{song[:_filename]} > #{song[:_filename]}.dca"
+          Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
+            if dca_wait_thr.value.success?
+              FileUtils.rm(song[:_filename])
+            end
+          end
+          data = { title: song[:title], filename: "#{song[:_filename]}.dca",
                    added_by: event.user.name }
-          self.current_queue.push(data)
+          current_queue.push(data)
           event.respond "Added **#{data[:title]}** to the queue."
+          puts data
         end
       end
       play(event) unless @currently_playing
     end
 
-    
     def self.skip(event)
       event.respond 'Skipping song'
       event.voice.stop_playing
@@ -153,7 +159,7 @@ module Bot
       @currently_playing ? response = "Now playing: **#{@currently_playing[:title]}** added by #{@currently_playing[:added_by]}" : response =  'Now playing: (nothing)'
       response = "#{response}\nCurrent queue: \n"
       i = 1
-      self.current_queue.each do |song|
+      current_queue.each do |song|
         response = "#{response}#{i}. **#{song[:title]}** added by #{song[:added_by]}\n"
         i += 1
       end
@@ -177,16 +183,10 @@ module Bot
         return
       end
       loop do
-        if self.current_queue.length.zero?
-          song = self.random_song
-        else
-          song = self.current_queue.shift
-        end
+        current_queue.length.zero? ? song = random_song : song = current_queue.shift
         @currently_playing = song
-        # event.respond "Now playing: **#{song[:title]}** added by #{song[:added_by]}"
         event.bot.game = "#{song[:title]}"
-        event.voice.play_file(song[:filename])
-        # break if self.current_queue.length.zero?
+        event.voice.play_dca(song[:filename])
       end
       @currently_playing = nil
       @paused = false
@@ -204,7 +204,7 @@ module Bot
         @paused = false
         event.bot.game = "#{@currently_playing[:title]}"
       end
-      return nil
+      nil
     end
 
     def self.set_volume(event, vol)
@@ -214,19 +214,37 @@ module Bot
     end
 
     def self.random_song
-      cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.mp3' --audio-format 'mp3' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{self.autoplaylist.sample}\""
-      Open3.popen3(cmd) do |_stdin, stdout, stderr, wait_thr|
-        if wait_thr.value.success?
-          song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-          data = { title: song[:title], filename: song[:_filename],
-                   added_by: "autoplaylist" }
-          return data
+      song = autoplaylist.sample
+      if song[:filename].nil?
+        cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.opus' --no-color --no-progress --no-playlist --print-json -f bestaudio/best --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
+        Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
+          if wait_thr.value.success?
+            parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
+            dca_cmd = "./vendor/dca-rs --i #{parsed_song[:_filename]} > #{parsed_song[:_filename]}.dca"
+            Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
+              if dca_wait_thr.value.success?
+                FileUtils.rm(parsed_song[:_filename])
+              end
+            end
+            song[:filename] = "#{parsed_song[:_filename]}.dca"
+            song[:title] = "#{parsed_song[:_filename]}.dca"
+            data = { title: parsed_song[:title], filename: "#{parsed_song[:_filename]}.dca",
+                     added_by: 'autoplaylist' }
+            data
+          end
         end
+      else
+        data = { title: song[:title], filename: song[:filename],
+                 added_by: 'autoplaylist' }
+        data
       end
     end
 
     def self.load_autoplaylist
-      File.open('config/autoplaylist.txt').each { |line| autoplaylist << line }
+      File.open('config/autoplaylist.txt').each do |line|
+        autolist = { search: line, title: nil, filename: nil }
+        autoplaylist.push(autolist)
+      end
     end
   end
 end
