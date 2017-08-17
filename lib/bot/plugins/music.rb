@@ -54,7 +54,8 @@ module Bot
     end
 
     command :random, help_available: false do |event|
-      play(event)
+     # play(event)
+     random_song
     end
 
     command :autolist, help_available: false do
@@ -62,7 +63,7 @@ module Bot
     end
 
     command :pf, help_available: false do |event, filename|
-      event.voice.play_file("./tmp/#{filename}")
+      event.voice.play(open("./tmp/#{filename}"))
     end
 
     command :blacklist,
@@ -138,12 +139,19 @@ module Bot
 
     def self.find_video(event, url)
       url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
-      opus_cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -x --audio-format 'm4a' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
+      opus_cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' --audio-format 'mp4' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
       Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
 
-          data = { title: song[:title], filename: song[:_filename],
+          dca_cmd =  "ffmpeg -threads 0 -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 #{song[:_filename]}.raw"
+          Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
+            if dca_wait_thr.value.success?
+              #FileUtils.rm(song[:_filename])
+            end
+          end
+
+          data = { title: song[:title], filename: "#{song[:_filename]}.raw",
                    added_by: event.user.name }
           current_queue.push(data)
           event.respond "Added **#{data[:title]}** to the queue."
@@ -189,7 +197,7 @@ module Bot
         @currently_playing = song
         puts "Song: #{song}"
         event.bot.game = song[:title]
-        event.voice.play_file(song[:filename])
+        event.voice.play(open("#{song[:filename]}"))
       end
       @currently_playing = nil
       @paused = false
@@ -220,13 +228,19 @@ module Bot
     def self.random_song
       song = autoplaylist.sample
       if song[:filename].nil?
-        cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -x --audio-format 'm4a' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
+        cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -f 'mp4' --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
         Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
           if wait_thr.value.success?
             parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-            song[:filename] = parsed_song[:_filename]
+            dca_cmd =  "ffmpeg -threads 0 -loglevel 0 -i #{parsed_song[:_filename]} -f s16le -ar 48000 -ac 2 #{parsed_song[:_filename]}.raw"
+            Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
+              if dca_wait_thr.value.success?
+                FileUtils.rm(parsed_song[:_filename])
+              end
+            end
+            song[:filename] = "#{parsed_song[:_filename]}.raw"
             song[:title] = parsed_song[:title]
-            data = { title: parsed_song[:title], filename: parsed_song[:_filename],
+            data = { title: parsed_song[:title], filename: "#{parsed_song[:_filename]}.raw",
                      added_by: 'autoplaylist' }
             data
           end
