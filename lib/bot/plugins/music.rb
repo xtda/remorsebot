@@ -57,12 +57,12 @@ module Bot
       play(event)
     end
 
-    command :test, help_available: false do |event, filename|
-      event.voice.play_dca("./tmp/#{filename}")
-    end
-
     command :autolist, help_available: false do
       puts autoplaylist
+    end
+
+    command :pf, help_available: false do |event, filename|
+      event.voice.play_file("./tmp/#{filename}")
     end
 
     command :blacklist,
@@ -138,21 +138,15 @@ module Bot
 
     def self.find_video(event, url)
       url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
-      opus_cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.m4a' --audio-format 'm4a' --audio-quality 0 --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
+      opus_cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -x --audio-format 'm4a' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
       Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-          dca_cmd = "./vendor/dca-rs --i #{song[:_filename]} > #{song[:_filename]}.dca"
-          Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
-            if dca_wait_thr.value.success?
-              FileUtils.rm(song[:_filename])
-            end
-          end
-          data = { title: song[:title], filename: "#{song[:_filename]}.dca",
+
+          data = { title: song[:title], filename: song[:_filename],
                    added_by: event.user.name }
           current_queue.push(data)
           event.respond "Added **#{data[:title]}** to the queue."
-          puts data
         end
       end
       play(event) unless @currently_playing
@@ -193,8 +187,9 @@ module Bot
       loop do
         current_queue.length.zero? ? song = random_song : song = current_queue.shift
         @currently_playing = song
-        event.bot.game = "#{song[:title]}"
-        event.voice.play_dca(song[:filename])
+        puts "Song: #{song}"
+        event.bot.game = song[:title]
+        event.voice.play_file(song[:filename])
       end
       @currently_playing = nil
       @paused = false
@@ -216,30 +211,22 @@ module Bot
 
     def self.set_volume(event, vol)
       return event.respond 'I am not currently on any channel type !join to make me join' unless event.voice
-      puts "Before: #{event.voice.filter_volume}"
       if (vol.to_f >= 0) && (vol.to_f <= 100)
-        event.voice.filter_volume = vol.to_f / 100
+        event.voice.volume = vol.to_f / 100
       end
-      puts "After: #{event.voice.filter_volume}"
       event.respond "Volume set to #{vol}"
     end
 
     def self.random_song
       song = autoplaylist.sample
       if song[:filename].nil?
-        cmd = "#{Configuration.data['youtube_dl_location']} -x -o './tmp/%(title)s.m4a' --audio-format 'm4a' --audio-quality 0 --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
+        cmd = "#{Configuration.data['youtube_dl_location']} -o './tmp/%(title)s.%(ext)s' -x --audio-format 'm4a' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json  --restrict-filenames -q --no-warnings -i --no-playlist ytsearch:\"#{song[:search]}\""
         Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
           if wait_thr.value.success?
             parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-            dca_cmd = "./vendor/dca-rs --i #{parsed_song[:_filename]} > #{parsed_song[:_filename]}.dca"
-            Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
-              if dca_wait_thr.value.success?
-                FileUtils.rm(parsed_song[:_filename])
-              end
-            end
-            song[:filename] = "#{parsed_song[:_filename]}.dca"
+            song[:filename] = parsed_song[:_filename]
             song[:title] = parsed_song[:title]
-            data = { title: parsed_song[:title], filename: "#{parsed_song[:_filename]}.dca",
+            data = { title: parsed_song[:title], filename: parsed_song[:_filename],
                      added_by: 'autoplaylist' }
             data
           end
