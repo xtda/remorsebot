@@ -196,6 +196,7 @@ module Bot
         @currently_playing = song
         event.bot.game = song[:title]
         event.voice.play(open("#{song[:filename]}"))
+        break unless event.voice
       end
       @currently_playing = nil
       @paused = false
