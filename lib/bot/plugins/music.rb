@@ -54,8 +54,7 @@ module Bot
     end
 
     command :random, help_available: false do |event|
-     # play(event)
-     random_song
+      play(event)
     end
 
     command :autolist, help_available: false do
@@ -147,7 +146,7 @@ module Bot
           dca_cmd =  "ffmpeg -threads 0 -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 #{song[:_filename]}.raw"
           Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
             if dca_wait_thr.value.success?
-              #FileUtils.rm(song[:_filename])
+              FileUtils.rm(song[:_filename])
             end
           end
 
@@ -195,7 +194,6 @@ module Bot
       loop do
         current_queue.length.zero? ? song = random_song : song = current_queue.shift
         @currently_playing = song
-        puts "Song: #{song}"
         event.bot.game = song[:title]
         event.voice.play(open("#{song[:filename]}"))
       end
