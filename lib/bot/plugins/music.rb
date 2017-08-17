@@ -64,7 +64,7 @@ module Bot
     command :autolist, help_available: false do
       puts autoplaylist
     end
-    
+
     command :blacklist,
             min_args: 0, max_args: 1,
             help_available: false,
@@ -195,11 +195,11 @@ module Bot
         @currently_playing = song
         event.bot.game = "#{song[:title]}"
         event.voice.play_dca(song[:filename])
+        break if !event.voice
       end
       @currently_playing = nil
       @paused = false
       event.bot.game = ' '
-      event.respond 'queue empty'
     end
 
     def self.pause_music(event)
@@ -253,7 +253,7 @@ module Bot
     end
 
     def self.load_autoplaylist
-      File.open('config/samplelist.txt').each do |line|
+      File.open('config/autoplaylist.txt').each do |line|
         autolist = { search: line, title: nil, filename: nil }
         autoplaylist.push(autolist)
       end
