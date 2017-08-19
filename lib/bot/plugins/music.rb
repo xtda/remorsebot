@@ -122,8 +122,6 @@ module Bot
     def self.join_channel(event)
       return event.respond 'You are not in any voice channel' unless event.user.voice_channel
 
-      if event.bot.voice(event)
-      end
       begin
         event.bot.voice_connect(event.user.voice_channel)
         "Connected to voice channel: #{event.user.voice_channel.name}"
@@ -145,7 +143,7 @@ module Bot
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
 
-          dca_cmd =  "ffmpeg -threads 0 -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 #{song[:_filename]}.raw"
+          dca_cmd = "ffmpeg -threads 0 -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 #{song[:_filename]}.raw"
           Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
             if dca_wait_thr.value.success?
               FileUtils.rm(song[:_filename])
