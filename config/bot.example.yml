@@ -3,7 +3,7 @@ discord_application_id: ''
 
 command_prefix: '!'
 
-bot_database_name: 'database.rb'
+bot_database_name: 'database.db'
 
 discord_owner_id: ''
 roles:

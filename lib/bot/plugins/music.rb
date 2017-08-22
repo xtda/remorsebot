@@ -145,11 +145,8 @@ module Bot
 
           dca_cmd = "ffmpeg -threads 0 -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 #{song[:_filename]}.raw"
           Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
-            if dca_wait_thr.value.success?
-              FileUtils.rm(song[:_filename])
-            end
+            FileUtils.rm(song[:_filename]) if dca_wait_thr.value.success?
           end
-
           data = { title: song[:title], filename: "#{song[:_filename]}.raw",
                    added_by: event.user.name }
           current_queue.push(data)
@@ -161,6 +158,7 @@ module Bot
 
     def self.skip(event)
       event.respond 'Skipping song'
+      event.bot.game = ' '
       event.voice.stop_playing
     end
 
@@ -187,7 +185,7 @@ module Bot
     def self.play(event)
       if @paused
         event.voice.continue
-        event.bot.game = "#{@currently_playing[:title]}"
+        event.bot.game = @currently_playing[:title]
         @paused = false
         return
       end
@@ -195,7 +193,8 @@ module Bot
         current_queue.length.zero? ? song = random_song : song = current_queue.shift
         @currently_playing = song
         event.bot.game = song[:title]
-        event.voice.play(open("#{song[:filename]}"))
+        music_thread = Thread.new { event.voice.play(open(song[:filename])) }
+        music_thread.join
         break unless event.voice
       end
       @currently_playing = nil
@@ -211,7 +210,7 @@ module Bot
       else
         event.voice.continue
         @paused = false
-        event.bot.game = "#{@currently_playing[:title]}"
+        event.bot.game = @currently_playing[:title]
       end
       nil
     end
@@ -231,11 +230,9 @@ module Bot
         Open3.popen3(cmd) do |_stdin, stdout, _stderr, wait_thr|
           if wait_thr.value.success?
             parsed_song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-            dca_cmd =  "ffmpeg -threads 0 -loglevel 0 -i #{parsed_song[:_filename]} -f s16le -ar 48000 -ac 2 #{parsed_song[:_filename]}.raw"
+            dca_cmd =   "ffmpeg -threads 0 -loglevel 0 -i #{parsed_song[:_filename]} -f s16le -ar 48000 -ac 2 #{parsed_song[:_filename]}.raw"
             Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
-              if dca_wait_thr.value.success?
-                FileUtils.rm(parsed_song[:_filename])
-              end
+              FileUtils.rm(parsed_song[:_filename]) if dca_wait_thr.value.success?
             end
             song[:filename] = "#{parsed_song[:_filename]}.raw"
             song[:title] = parsed_song[:title]
