@@ -1,11 +1,13 @@
 module Bot
   module Database
     def self.init
-      Dir.mkdir('./data') unless File.exist?('./data')
-      Dir.mkdir('./data/migrations') unless File.exist?('./data/migrations')
-      FileUtils.touch "data/#{Configuration.data['bot_database_name']}" unless File.exist?("data/#{Configuration.data['bot_database_name']}")
+      if Configuration.data['bot_database_type'] == 'sqlite'
+        Dir.mkdir('./data') unless File.exist?('./data')
+        Dir.mkdir('./data/migrations') unless File.exist?('./data/migrations')
+        FileUtils.touch "#{Configuration.data['bot_database_name']}" unless File.exist?("#{Configuration.data['bot_database_name']}")
+      end
 
-      db = Sequel.connect("sqlite://data/#{Configuration.data['bot_database_name']}")
+      db = Sequel.connect("#{Configuration.data['bot_database_type']}://#{Configuration.data['bot_database_name']}")
 
       Sequel.extension :migration
 

@@ -6,4 +6,7 @@ gem 'openssl', '>=2.0.3'
 gem 'rest-client'
 
 gem 'sequel'
+
 gem 'sqlite3'
+
+gem 'pg'

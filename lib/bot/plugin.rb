@@ -1,6 +1,6 @@
 module Bot
-  include Helpers
   class Plugin
+    extend Bot::Helpers
     def self.plugins
       @plugins ||= []
     end

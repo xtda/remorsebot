@@ -2,7 +2,6 @@ module Bot
   class Core < Plugin
     extend Discordrb::EventContainer
     extend Discordrb::Commands::CommandContainer
-
     def self.about
       { name: 'Remorse Bot Core',
         author: 'xtda',
@@ -11,8 +10,10 @@ module Bot
 
     def self.init() end
 
-    command :id do |event|
-      event.user.id
+    command :id,
+            help_available: false do |event|
+
+      temp_message(event, event.user.id, 20)
     end
 
     ready do |event|
@@ -23,7 +24,8 @@ module Bot
       end
     end
 
-    command :plugins do |event|
+    command :plugins,
+            help_available: false do |event|
       plugins = ''
       Plugin.plugins.each do |plugin|
         plugins += plugin.about.to_s

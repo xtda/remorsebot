@@ -28,6 +28,7 @@ GEM
     openssl (2.0.4)
     opus-ruby (1.0.1)
       ffi
+    pg (0.20.0)
     rbnacl (3.4.0)
       ffi
     rest-client (2.0.2)
@@ -51,9 +52,10 @@ DEPENDENCIES
   discordrb!
   json (~> 2)
   openssl (>= 2.0.3)
+  pg
   rest-client
   sequel
   sqlite3
 
 BUNDLED WITH
-   1.15.3
+   1.15.4
