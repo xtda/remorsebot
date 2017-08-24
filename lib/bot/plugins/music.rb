@@ -173,8 +173,8 @@ module Bot
       Open3.popen3(opus_cmd) do |_stdin, stdout, stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-          dca_cmd = "ffmpeg -threads 0 -nostdin -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -ac 2 -vn -b:a 128 #{song[:_filename]}.raw"
-          Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
+          dca_cmd2 = "ffmpeg -threads 0 -y -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -b:a 192K -vn #{song[:_filename]}.raw"
+          Open3.popen3(dca_cmd2) do |_stdin, _stdout, _stderr, dca_wait_thr|
             FileUtils.rm(song[:_filename]) if dca_wait_thr.value.success?
           end
           return song
@@ -301,7 +301,6 @@ module Bot
 
     def self.load_autoplaylist
       File.open('config/autoplaylist.txt').each do |line|
-        autolist = { search: line, title: nil, filename: nil }
         AutoPlaylist.find_or_create_song(line, nil, nil)
       end
     end
