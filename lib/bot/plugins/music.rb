@@ -18,8 +18,8 @@ module Bot
         create(search: search_term, title: title, filename: filename)
       end
 
-      def self.update_song(search_term, title, filename)
-        where(search: search_term).update(title: title, filename: filename)
+      def self.update_song(id, title, filename)
+        where(id: id).update(title: title, filename: filename)
       end
 
       def self.random_song
@@ -272,7 +272,7 @@ module Bot
                  added_by: 'autoplaylist' }
       else
         new_song = download_song(song.search, 'auto')
-        AutoPlaylist.update_song(song.search, new_song[:title], "#{new_song[:_filename]}.raw",)
+        AutoPlaylist.update_song(song.id, new_song[:title], "#{new_song[:_filename]}.raw",)
         data = { title: new_song[:title], filename: "#{new_song[:_filename]}.raw",
                  added_by: 'autoplaylist' }
       end
