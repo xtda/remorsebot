@@ -10,7 +10,7 @@ module Bot
         first(search: search_term)
       end
 
-      def self.find_or_create_song(search_term, title, filename)
+      def self.find_or_create_song(search_term, _title, _filename)
         first(search: search_term) || create(search: search_term)
       end
 
@@ -46,10 +46,6 @@ module Bot
 
     def self.black_list
       @black_list ||= @black_list = []
-    end
-
-    command :test do |_event, search|
-      puts AutoPlaylist.random_song.search
     end
 
     command :join, help_available: false,
@@ -168,13 +164,14 @@ module Bot
     end
 
     def self.download_song(url, path)
-      url.include?('https://www.youtube.com/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
+      url.include?('https://www.youtube.com/') || url.include?('https://youtu.be/') ? search = "#{url}" : search = "ytsearch:\"#{url}\""
       opus_cmd = "#{Configuration.data['youtube_dl_location']} -o './#{path}/%(title)s.%(ext)s' --audio-format 'mp4' --format 'bestaudio[ext=m4a]/best' --no-color --no-progress --no-playlist --print-json --restrict-filenames -q --no-warnings -i --no-playlist #{search}"
-      Open3.popen3(opus_cmd) do |_stdin, stdout, stderr, wait_thr|
+      Open3.popen3(opus_cmd) do |_stdin, stdout, _stderr, wait_thr|
         if wait_thr.value.success?
           song = JSON.parse(stdout.read.to_s, symbolize_names: true)
-          dca_cmd2 = "ffmpeg -threads 0 -y -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -b:a 192K -vn #{song[:_filename]}.raw"
-          Open3.popen3(dca_cmd2) do |_stdin, _stdout, _stderr, dca_wait_thr|
+          #dca_cmd2 = "ffmpeg -threads 0 -y -loglevel 0 -i #{song[:_filename]} -f s16le -ar 48000 -b:a 192K -vn #{song[:_filename]}.raw"
+          dca_cmd = "./vendor/dca-rs -i #{song[:_filename]} -v 150 > #{song[:_filename]}.dca"
+          Open3.popen3(dca_cmd) do |_stdin, _stdout, _stderr, dca_wait_thr|
             FileUtils.rm(song[:_filename]) if dca_wait_thr.value.success?
           end
           return song
@@ -184,7 +181,7 @@ module Bot
 
     def self.find_video(event, url)
       song = download_song(url, 'tmp')
-      data = { title: song[:title], filename: "#{song[:_filename]}.raw",
+      data = { title: song[:title], filename: "#{song[:_filename]}.dca",
                added_by: event.user.name }
       current_queue.push(data)
       temp_message(event, "Added **#{data[:title]}** to the queue.", 20)
@@ -235,7 +232,7 @@ module Bot
         current_queue.length.zero? ? song = random_song : song = current_queue.shift
         @currently_playing = song
         event.bot.game = song[:title]
-        music_thread = Thread.new { event.voice.play(open(song[:filename])) }
+        music_thread = Thread.new { event.voice.play_dca(song[:filename]) }
         music_thread.join
         break if event.voice.nil?
       end
@@ -272,8 +269,8 @@ module Bot
                  added_by: 'autoplaylist' }
       else
         new_song = download_song(song.search, 'auto')
-        AutoPlaylist.update_song(song.id, new_song[:title], "#{new_song[:_filename]}.raw",)
-        data = { title: new_song[:title], filename: "#{new_song[:_filename]}.raw",
+        AutoPlaylist.update_song(song.id, new_song[:title], "#{new_song[:_filename]}.dca",)
+        data = { title: new_song[:title], filename: "#{new_song[:_filename]}.dca",
                  added_by: 'autoplaylist' }
       end
       data

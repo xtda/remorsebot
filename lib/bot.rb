@@ -27,7 +27,20 @@ module Bot
     bot.include! plugin
     plugin.init
   end
+
+  trap 'SIGINT' do
+    bot.stop
+    exit 130
+  end
+
+  trap 'SIGTERM' do
+    bot.stop
+    exit 143
+  end
+
   bot.run :async
-  gets
-  bot.stop
+
+  loop do
+    sleep 1
+  end
 end
